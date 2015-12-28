@@ -20,7 +20,8 @@
      type="text/css">
 	.st0{fill-rule:evenodd;clip-rule:evenodd;fill:#FFFFFF;}
 	.st1{fill-rule:evenodd;clip-rule:evenodd;fill:#EEEEEE;}
-</style><circle
+</style><rect width="512" height="512" fill="#FFFFFF" fill-opacity="0.87"/>
+  <circle
      id="circle5"
      r="158"
      cy="232"
