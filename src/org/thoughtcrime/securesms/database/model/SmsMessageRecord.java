@@ -25,6 +25,7 @@ import org.thoughtcrime.securesms.database.MmsSmsColumns;
 import org.thoughtcrime.securesms.database.SmsDatabase;
 import org.thoughtcrime.securesms.database.documents.IdentityKeyMismatch;
 import org.thoughtcrime.securesms.database.documents.NetworkFailure;
+import org.thoughtcrime.securesms.database.documents.UnregisteredUser;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.Recipients;
 
@@ -50,9 +51,9 @@ public class SmsMessageRecord extends MessageRecord {
                           int status, List<IdentityKeyMismatch> mismatches,
                           int subscriptionId)
   {
-    super(context, id, body, recipients, individualRecipient, recipientDeviceId,
-          dateSent, dateReceived, threadId, status, receiptCount, type,
-          mismatches, new LinkedList<NetworkFailure>(), subscriptionId);
+    super(context, id, body, recipients, individualRecipient, recipientDeviceId, dateSent,
+          dateReceived, threadId, status, receiptCount, type, mismatches,
+          new LinkedList<NetworkFailure>(), new LinkedList<UnregisteredUser>(), subscriptionId);
   }
 
   public long getType() {
