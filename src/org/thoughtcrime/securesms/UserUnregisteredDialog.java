@@ -2,7 +2,6 @@ package org.thoughtcrime.securesms;
 
 import android.content.Context;
 import android.content.DialogInterface;
-import android.database.Cursor;
 import android.os.AsyncTask;
 import android.support.v7.app.AlertDialog;
 import android.text.method.LinkMovementMethod;
@@ -10,16 +9,12 @@ import android.widget.TextView;
 
 import org.thoughtcrime.securesms.crypto.MasterSecret;
 import org.thoughtcrime.securesms.database.DatabaseFactory;
-import org.thoughtcrime.securesms.database.MmsAddressDatabase;
 import org.thoughtcrime.securesms.database.MmsDatabase;
-import org.thoughtcrime.securesms.database.MmsSmsDatabase;
-import org.thoughtcrime.securesms.database.SmsDatabase;
 import org.thoughtcrime.securesms.database.documents.UnregisteredUser;
 import org.thoughtcrime.securesms.database.model.MessageRecord;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientFactory;
 import org.thoughtcrime.securesms.recipients.Recipients;
-import org.thoughtcrime.securesms.sms.MessageSender;
 
 public class UserUnregisteredDialog extends AlertDialog {
 
@@ -41,6 +36,7 @@ public class UserUnregisteredDialog extends AlertDialog {
     setMessage(message);
 
     setButton(AlertDialog.BUTTON_POSITIVE, "Got it", new AcceptListener(masterSecret, messageRecord, user));
+    setButton(AlertDialog.BUTTON_NEGATIVE, context.getString(android.R.string.cancel), new CancelListener());
   }
 
   @Override
@@ -72,8 +68,8 @@ public class UserUnregisteredDialog extends AlertDialog {
       {
         @Override
         protected Void doInBackground(Void... params) {
-          Recipients recipient = RecipientFactory.getRecipientsForIds(getContext(), new long[]{user.getRecipientId()}, false);
-          DatabaseFactory.getRecipientPreferenceDatabase(getContext()).setSeenUserUnregistered(recipient, true);
+          Recipients recipients = RecipientFactory.getRecipientsForIds(getContext(), new long[]{user.getRecipientId()}, false);
+          DatabaseFactory.getRecipientPreferenceDatabase(getContext()).setSeenUserUnregistered(recipients, true);
 
           processMessageRecord(messageRecord);
           processPendingMessageRecords(messageRecord.getThreadId());
@@ -107,6 +103,13 @@ public class UserUnregisteredDialog extends AlertDialog {
         }
       }.execute();
 
+      if (callback != null) callback.onClick(null, 0);
+    }
+  }
+
+  private class CancelListener implements OnClickListener {
+    @Override
+    public void onClick(DialogInterface dialog, int which) {
       if (callback != null) callback.onClick(null, 0);
     }
   }
