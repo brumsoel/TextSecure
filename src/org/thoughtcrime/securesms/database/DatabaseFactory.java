@@ -823,6 +823,7 @@ public class DatabaseFactory {
 
       if (oldVersion < INTRODUCED_UNREGISTERED_USER_HANDLING_VERSION) {
         db.execSQL("ALTER TABLE recipient_preferences ADD COLUMN seen_user_unregistered INTEGER DEFAULT 0");
+        db.execSQL("ALTER TABLE mms ADD COLUMN unregistered_users TEXT DEFAULT NULL");
       }
 
       db.setTransactionSuccessful();
