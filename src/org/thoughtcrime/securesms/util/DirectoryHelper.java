@@ -18,10 +18,13 @@ import org.thoughtcrime.securesms.crypto.MasterSecret;
 import org.thoughtcrime.securesms.crypto.SessionUtil;
 import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.database.NotInDirectoryException;
+import org.thoughtcrime.securesms.database.RecipientPreferenceDatabase;
+import org.thoughtcrime.securesms.database.RecipientPreferenceDatabase.RecipientsPreferences;
 import org.thoughtcrime.securesms.database.TextSecureDirectory;
 import org.thoughtcrime.securesms.jobs.MultiDeviceContactUpdateJob;
 import org.thoughtcrime.securesms.notifications.MessageNotifier;
 import org.thoughtcrime.securesms.push.TextSecureCommunicationFactory;
+import org.thoughtcrime.securesms.recipients.RecipientFactory;
 import org.thoughtcrime.securesms.recipients.Recipients;
 import org.thoughtcrime.securesms.sms.IncomingJoinedMessage;
 import org.thoughtcrime.securesms.util.DirectoryHelper.UserCapabilities.Capability;
@@ -98,7 +101,10 @@ public class DirectoryHelper {
       }
 
       directory.setNumbers(activeTokens, eligibleContactNumbers);
-      return updateContactsDatabase(context, localNumber, activeTokens, true);
+
+      List<String> newUsers = updateContactsDatabase(context, localNumber, activeTokens, true);
+      resetUnregisteredStatus(context, newUsers);
+      return newUsers;
     }
 
     return new LinkedList<>();
@@ -126,6 +132,7 @@ public class DirectoryHelper {
         }
 
         notifyNewUsers(context, masterSecret, newUsers);
+        resetUnregisteredStatus(context, newUsers);
 
         return new UserCapabilities(Capability.SUPPORTED, details.get().isVoice() ? Capability.SUPPORTED : Capability.UNSUPPORTED);
       } else {
@@ -225,6 +232,21 @@ public class DirectoryHelper {
           MessageNotifier.updateNotification(context, masterSecret, false, smsAndThreadId.second, true);
         } else {
           MessageNotifier.updateNotification(context, masterSecret, false, smsAndThreadId.second, false);
+        }
+      }
+    }
+  }
+
+  private static void resetUnregisteredStatus(@NonNull Context context, @NonNull List<String> newUsers) {
+    RecipientPreferenceDatabase database = DatabaseFactory.getRecipientPreferenceDatabase(context);
+
+    for (String number : newUsers) {
+      Recipients recipients = RecipientFactory.getRecipientsFromString(context, number, false);
+
+      if (recipients.getPrimaryRecipient() != null) {
+        Optional<RecipientsPreferences> prefs = database.getRecipientsPreferences(recipients.getIds());
+        if (prefs.isPresent() && prefs.get().hasSeenUserUnregistered()) {
+          database.setSeenUserUnregistered(recipients, false);
         }
       }
     }
