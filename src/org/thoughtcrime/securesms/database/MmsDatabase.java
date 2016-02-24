@@ -202,14 +202,6 @@ public class MmsDatabase extends MessagingDatabase {
     }
   }
 
-  public void removeUnregisteredUser(long messageId, UnregisteredUser user) {
-    try {
-      removeFromDocument(messageId, UNREGISTERED_USERS, user, UnregisteredUserList.class);
-    } catch (IOException e) {
-      Log.w(TAG, e);
-    }
-  }
-
   public void incrementDeliveryReceiptCount(SyncMessageId messageId) {
     MmsAddressDatabase addressDatabase = DatabaseFactory.getMmsAddressDatabase(context);
     SQLiteDatabase     database        = databaseHelper.getWritableDatabase();
