@@ -7,7 +7,9 @@ import org.thoughtcrime.securesms.crypto.MasterSecret;
 import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.database.MmsDatabase;
 import org.thoughtcrime.securesms.database.NoSuchMessageException;
+import org.thoughtcrime.securesms.database.RecipientPreferenceDatabase.RecipientsPreferences;
 import org.thoughtcrime.securesms.database.documents.NetworkFailure;
+import org.thoughtcrime.securesms.database.documents.UnregisteredUser;
 import org.thoughtcrime.securesms.dependencies.InjectableType;
 import org.thoughtcrime.securesms.jobs.requirements.MasterSecretRequirement;
 import org.thoughtcrime.securesms.mms.OutgoingGroupMediaMessage;
@@ -20,6 +22,7 @@ import org.thoughtcrime.securesms.transport.UndeliverableMessageException;
 import org.thoughtcrime.securesms.util.GroupUtil;
 import org.whispersystems.jobqueue.JobParameters;
 import org.whispersystems.jobqueue.requirements.NetworkRequirement;
+import org.whispersystems.libaxolotl.util.guava.Optional;
 import org.whispersystems.textsecure.api.TextSecureMessageSender;
 import org.whispersystems.textsecure.api.crypto.UntrustedIdentityException;
 import org.whispersystems.textsecure.api.messages.TextSecureAttachment;
@@ -28,6 +31,7 @@ import org.whispersystems.textsecure.api.messages.TextSecureGroup;
 import org.whispersystems.textsecure.api.push.TextSecureAddress;
 import org.whispersystems.textsecure.api.push.exceptions.EncapsulatedExceptions;
 import org.whispersystems.textsecure.api.push.exceptions.NetworkFailureException;
+import org.whispersystems.textsecure.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.textsecure.api.util.InvalidNumberException;
 import org.whispersystems.textsecure.internal.push.TextSecureProtos.GroupContext;
 
@@ -91,7 +95,9 @@ public class PushGroupSendJob extends PushSendJob implements InjectableType {
       notifyMediaMessageDeliveryFailed(context, messageId);
     } catch (EncapsulatedExceptions e) {
       Log.w(TAG, e);
-      List<NetworkFailure> failures = new LinkedList<>();
+      List<NetworkFailure>   failures               = new LinkedList<>();
+      List<UnregisteredUser> unregisteredUsers      = new LinkedList<>();
+      boolean                notifyUserUnregistered = false;
 
       for (NetworkFailureException nfe : e.getNetworkExceptions()) {
         Recipient recipient = RecipientFactory.getRecipientsFromString(context, nfe.getE164number(), false).getPrimaryRecipient();
@@ -103,11 +109,26 @@ public class PushGroupSendJob extends PushSendJob implements InjectableType {
         database.addMismatchedIdentity(messageId, recipient.getRecipientId(), uie.getIdentityKey());
       }
 
-      database.addFailures(messageId, failures);
-      database.markAsSentFailed(messageId);
-      database.markAsPush(messageId);
+      for (UnregisteredUserException uue : e.getUnregisteredUserExceptions()) {
+        Recipient recipient = RecipientFactory.getRecipientsFromString(context, uue.getE164Number(), false).getPrimaryRecipient();
+        Optional<RecipientsPreferences> prefs = DatabaseFactory.getRecipientPreferenceDatabase(context)
+                                                               .getRecipientsPreferences(new long[] {recipient.getRecipientId()});
+        if (!prefs.isPresent() || !prefs.get().hasSeenUserUnregistered()) notifyUserUnregistered = true;
+        unregisteredUsers.add(new UnregisteredUser(recipient.getRecipientId()));
+      }
 
-      notifyMediaMessageDeliveryFailed(context, messageId);
+      database.markAsPush(messageId);
+      database.addFailures(messageId, failures);
+      database.addUnregisteredUsers(messageId, unregisteredUsers);
+
+      if (!failures.isEmpty() || !e.getUntrustedIdentityExceptions().isEmpty() || notifyUserUnregistered) {
+        database.markAsSentFailed(messageId);
+        notifyMediaMessageDeliveryFailed(context, messageId);
+      } else {
+        database.markAsSecure(messageId);
+        database.markAsSent(messageId);
+        markAttachmentsUploaded(messageId, message.getAttachments());
+      }
     }
   }
 

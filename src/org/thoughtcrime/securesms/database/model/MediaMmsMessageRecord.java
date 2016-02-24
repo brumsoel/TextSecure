@@ -25,6 +25,7 @@ import org.thoughtcrime.securesms.database.MmsDatabase;
 import org.thoughtcrime.securesms.database.SmsDatabase.Status;
 import org.thoughtcrime.securesms.database.documents.IdentityKeyMismatch;
 import org.thoughtcrime.securesms.database.documents.NetworkFailure;
+import org.thoughtcrime.securesms.database.documents.UnregisteredUser;
 import org.thoughtcrime.securesms.mms.SlideDeck;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.Recipients;
@@ -53,10 +54,13 @@ public class MediaMmsMessageRecord extends MessageRecord {
                                @NonNull SlideDeck slideDeck,
                                int partCount, long mailbox,
                                List<IdentityKeyMismatch> mismatches,
-                               List<NetworkFailure> failures, int subscriptionId)
+                               List<NetworkFailure> failures,
+                               List<UnregisteredUser> unregisteredUsers,
+                               int subscriptionId)
   {
     super(context, id, body, recipients, individualRecipient, recipientDeviceId, dateSent,
-          dateReceived, threadId, Status.STATUS_NONE, receiptCount, mailbox, mismatches, failures, subscriptionId);
+          dateReceived, threadId, Status.STATUS_NONE, receiptCount, mailbox, mismatches, failures,
+          unregisteredUsers, subscriptionId);
 
     this.context   = context.getApplicationContext();
     this.partCount = partCount;

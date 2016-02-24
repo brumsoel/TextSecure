@@ -32,6 +32,7 @@ public class RecipientPreferenceDatabase extends Database {
   private static final String MUTE_UNTIL              = "mute_until";
   private static final String COLOR                   = "color";
   private static final String SEEN_INVITE_REMINDER    = "seen_invite_reminder";
+  private static final String SEEN_USER_UNREGISTERED  = "seen_user_unregistered";
   private static final String DEFAULT_SUBSCRIPTION_ID = "default_subscription_id";
 
   public enum VibrateState {
@@ -62,6 +63,7 @@ public class RecipientPreferenceDatabase extends Database {
           MUTE_UNTIL + " INTEGER DEFAULT 0, " +
           COLOR + " TEXT DEFAULT NULL, " +
           SEEN_INVITE_REMINDER + " INTEGER DEFAULT 0, " +
+          SEEN_USER_UNREGISTERED + " INTEGER DEFAULT 0, " +
           DEFAULT_SUBSCRIPTION_ID + " INTEGER DEFAULT -1);";
 
   public RecipientPreferenceDatabase(Context context, SQLiteOpenHelper databaseHelper) {
@@ -97,6 +99,7 @@ public class RecipientPreferenceDatabase extends Database {
         String  serializedColor       = cursor.getString(cursor.getColumnIndexOrThrow(COLOR));
         Uri     notificationUri       = notification == null ? null : Uri.parse(notification);
         boolean seenInviteReminder    = cursor.getInt(cursor.getColumnIndexOrThrow(SEEN_INVITE_REMINDER)) == 1;
+        boolean seenUserUnregistered  = cursor.getInt(cursor.getColumnIndexOrThrow(SEEN_USER_UNREGISTERED)) == 1;
         int     defaultSubscriptionId = cursor.getInt(cursor.getColumnIndexOrThrow(DEFAULT_SUBSCRIPTION_ID));
 
         MaterialColor color;
@@ -113,7 +116,7 @@ public class RecipientPreferenceDatabase extends Database {
         return Optional.of(new RecipientsPreferences(blocked, muteUntil,
                                                      VibrateState.fromId(vibrateState),
                                                      notificationUri, color, seenInviteReminder,
-                                                     defaultSubscriptionId));
+                                                     seenUserUnregistered, defaultSubscriptionId));
       }
 
       return Optional.absent();
@@ -166,6 +169,12 @@ public class RecipientPreferenceDatabase extends Database {
     updateOrInsert(recipients, values);
   }
 
+  public void setSeenUserUnregistered(Recipients recipients, boolean seen) {
+    ContentValues values = new ContentValues(1);
+    values.put(SEEN_USER_UNREGISTERED, seen ? 1 : 0);
+    updateOrInsert(recipients, values);
+  }
+
   private void updateOrInsert(Recipients recipients, ContentValues contentValues) {
     SQLiteDatabase database = databaseHelper.getWritableDatabase();
 
@@ -192,6 +201,7 @@ public class RecipientPreferenceDatabase extends Database {
     private final Uri           notification;
     private final MaterialColor color;
     private final boolean       seenInviteReminder;
+    private final boolean       seenUserUnregistered;
     private final int           defaultSubscriptionId;
 
     public RecipientsPreferences(boolean blocked, long muteUntil,
@@ -199,6 +209,7 @@ public class RecipientPreferenceDatabase extends Database {
                                  @Nullable Uri notification,
                                  @Nullable MaterialColor color,
                                  boolean seenInviteReminder,
+                                 boolean seenUserUnregistered,
                                  int defaultSubscriptionId)
     {
       this.blocked               = blocked;
@@ -207,6 +218,7 @@ public class RecipientPreferenceDatabase extends Database {
       this.notification          = notification;
       this.color                 = color;
       this.seenInviteReminder    = seenInviteReminder;
+      this.seenUserUnregistered  = seenUserUnregistered;
       this.defaultSubscriptionId = defaultSubscriptionId;
     }
 
@@ -232,6 +244,10 @@ public class RecipientPreferenceDatabase extends Database {
 
     public boolean hasSeenInviteReminder() {
       return seenInviteReminder;
+    }
+
+    public boolean hasSeenUserUnregistered() {
+      return seenUserUnregistered;
     }
 
     public Optional<Integer> getDefaultSubscriptionId() {

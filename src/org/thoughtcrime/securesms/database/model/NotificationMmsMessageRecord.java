@@ -24,6 +24,7 @@ import org.thoughtcrime.securesms.database.SmsDatabase.Status;
 import org.thoughtcrime.securesms.database.MmsDatabase;
 import org.thoughtcrime.securesms.database.documents.NetworkFailure;
 import org.thoughtcrime.securesms.database.documents.IdentityKeyMismatch;
+import org.thoughtcrime.securesms.database.documents.UnregisteredUser;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.Recipients;
 
@@ -54,7 +55,8 @@ public class NotificationMmsMessageRecord extends MessageRecord {
   {
     super(context, id, new Body("", true), recipients, individualRecipient, recipientDeviceId,
           dateSent, dateReceived, threadId, Status.STATUS_NONE, receiptCount, mailbox,
-          new LinkedList<IdentityKeyMismatch>(), new LinkedList<NetworkFailure>(), subscriptionId);
+          new LinkedList<IdentityKeyMismatch>(), new LinkedList<NetworkFailure>(),
+          new LinkedList<UnregisteredUser>(), subscriptionId);
 
     this.contentLocation = contentLocation;
     this.messageSize     = messageSize;

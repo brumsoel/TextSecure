@@ -31,11 +31,14 @@ import org.thoughtcrime.securesms.components.FromTextView;
 import org.thoughtcrime.securesms.crypto.MasterSecret;
 import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.database.MmsDatabase;
+import org.thoughtcrime.securesms.database.RecipientPreferenceDatabase.RecipientsPreferences;
 import org.thoughtcrime.securesms.database.documents.IdentityKeyMismatch;
 import org.thoughtcrime.securesms.database.documents.NetworkFailure;
+import org.thoughtcrime.securesms.database.documents.UnregisteredUser;
 import org.thoughtcrime.securesms.database.model.MessageRecord;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.sms.MessageSender;
+import org.whispersystems.libaxolotl.util.guava.Optional;
 
 /**
  * A simple view to show the recipients of a message
@@ -50,6 +53,7 @@ public class MessageRecipientListItem extends RelativeLayout
   private Recipient       recipient;
   private FromTextView    fromView;
   private TextView        errorDescription;
+  private Button          unregisteredButton;
   private Button          conflictButton;
   private Button          resendButton;
   private AvatarImageView contactPhotoImage;
@@ -66,11 +70,12 @@ public class MessageRecipientListItem extends RelativeLayout
 
   @Override
   protected void onFinishInflate() {
-    this.fromView          = (FromTextView)    findViewById(R.id.from);
-    this.errorDescription  = (TextView)        findViewById(R.id.error_description);
-    this.contactPhotoImage = (AvatarImageView) findViewById(R.id.contact_photo_image);
-    this.conflictButton    = (Button)          findViewById(R.id.conflict_button);
-    this.resendButton      = (Button)          findViewById(R.id.resend_button);
+    this.fromView           = (FromTextView)    findViewById(R.id.from);
+    this.errorDescription   = (TextView)        findViewById(R.id.error_description);
+    this.contactPhotoImage  = (AvatarImageView) findViewById(R.id.contact_photo_image);
+    this.unregisteredButton = (Button)          findViewById(R.id.unregistered_button);
+    this.conflictButton     = (Button)          findViewById(R.id.conflict_button);
+    this.resendButton       = (Button)          findViewById(R.id.resend_button);
   }
 
   public void set(final MasterSecret masterSecret,
@@ -90,12 +95,14 @@ public class MessageRecipientListItem extends RelativeLayout
                                   final MessageRecord record,
                                   final boolean isPushGroup)
   {
-    final NetworkFailure      networkFailure = getNetworkFailure(record);
-    final IdentityKeyMismatch keyMismatch    = networkFailure == null ? getKeyMismatch(record) : null;
+    final NetworkFailure      networkFailure   = getNetworkFailure(record);
+    final UnregisteredUser    unregisteredUser = getUnregisteredUser(record);
+    final IdentityKeyMismatch keyMismatch      = networkFailure == null ? getKeyMismatch(record) : null;
 
     String errorText = "";
 
     if (keyMismatch != null) {
+      unregisteredButton.setVisibility(View.GONE);
       resendButton.setVisibility(View.GONE);
       conflictButton.setVisibility(View.VISIBLE);
 
@@ -107,6 +114,7 @@ public class MessageRecipientListItem extends RelativeLayout
         }
       });
     } else if (networkFailure != null || (!isPushGroup && record.isFailed())) {
+      unregisteredButton.setVisibility(View.GONE);
       resendButton.setVisibility(View.VISIBLE);
       resendButton.setEnabled(true);
       conflictButton.setVisibility(View.GONE);
@@ -119,7 +127,28 @@ public class MessageRecipientListItem extends RelativeLayout
           new ResendAsyncTask(masterSecret, record, networkFailure).execute();
         }
       });
+    } else if (unregisteredUser != null) {
+      resendButton.setVisibility(View.GONE);
+      conflictButton.setVisibility(View.GONE);
+
+      errorText = "No longer registered";
+
+      Optional<RecipientsPreferences> prefs = DatabaseFactory.getRecipientPreferenceDatabase(getContext())
+                                                             .getRecipientsPreferences(new long[] {recipient.getRecipientId()});
+      // TODO: Should we always display the "More Info" button instead of hiding it after the user has seen the UserUnregisteredDialog for this recipient?
+      if (!prefs.isPresent() || !prefs.get().hasSeenUserUnregistered()) {
+        unregisteredButton.setVisibility(View.VISIBLE);
+        unregisteredButton.setOnClickListener(new OnClickListener() {
+          @Override
+          public void onClick(View v) {
+            new UserUnregisteredDialog(getContext(), masterSecret, record, unregisteredUser);
+          }
+        });
+      } else {
+        unregisteredButton.setVisibility(View.GONE);
+      }
     } else {
+      unregisteredButton.setVisibility(View.GONE);
       resendButton.setVisibility(View.GONE);
       conflictButton.setVisibility(View.GONE);
     }
@@ -133,6 +162,17 @@ public class MessageRecipientListItem extends RelativeLayout
       for (final NetworkFailure failure : record.getNetworkFailures()) {
         if (failure.getRecipientId() == recipient.getRecipientId()) {
           return failure;
+        }
+      }
+    }
+    return null;
+  }
+
+  private UnregisteredUser getUnregisteredUser(final MessageRecord record) {
+    if (record.hasUnregisteredUsers()) {
+      for (final UnregisteredUser user : record.getUnregisteredUsers()) {
+        if (user.getRecipientId() == recipient.getRecipientId()) {
+          return user;
         }
       }
     }

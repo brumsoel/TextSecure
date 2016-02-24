@@ -42,6 +42,8 @@ import org.thoughtcrime.securesms.database.documents.IdentityKeyMismatch;
 import org.thoughtcrime.securesms.database.documents.IdentityKeyMismatchList;
 import org.thoughtcrime.securesms.database.documents.NetworkFailure;
 import org.thoughtcrime.securesms.database.documents.NetworkFailureList;
+import org.thoughtcrime.securesms.database.documents.UnregisteredUser;
+import org.thoughtcrime.securesms.database.documents.UnregisteredUserList;
 import org.thoughtcrime.securesms.database.model.DisplayRecord;
 import org.thoughtcrime.securesms.database.model.MediaMmsMessageRecord;
 import org.thoughtcrime.securesms.database.model.MessageRecord;
@@ -64,6 +66,7 @@ import org.thoughtcrime.securesms.util.Util;
 import org.whispersystems.jobqueue.JobManager;
 import org.whispersystems.libaxolotl.InvalidMessageException;
 import org.whispersystems.libaxolotl.util.guava.Optional;
+import org.whispersystems.textsecure.api.push.exceptions.UnregisteredUserException;
 import org.whispersystems.textsecure.api.util.InvalidNumberException;
 
 import java.io.IOException;
@@ -95,6 +98,7 @@ public class MmsDatabase extends MessagingDatabase {
           static final String TRANSACTION_ID     = "tr_id";
           static final String PART_COUNT         = "part_count";
           static final String NETWORK_FAILURE    = "network_failures";
+          static final String UNREGISTERED_USERS = "unregistered_users";
 
   public static final String CREATE_TABLE = "CREATE TABLE " + TABLE_NAME + " (" + ID + " INTEGER PRIMARY KEY, "                          +
     THREAD_ID + " INTEGER, " + DATE_SENT + " INTEGER, " + DATE_RECEIVED + " INTEGER, " + MESSAGE_BOX + " INTEGER, " +
@@ -109,8 +113,8 @@ public class MmsDatabase extends MessagingDatabase {
     "retr_txt" + " TEXT, " + "retr_txt_cs" + " INTEGER, " + "read_status" + " INTEGER, "    +
     "ct_cls" + " INTEGER, " + "resp_txt" + " TEXT, " + "d_tm" + " INTEGER, "     +
     RECEIPT_COUNT + " INTEGER DEFAULT 0, " + MISMATCHED_IDENTITIES + " TEXT DEFAULT NULL, "     +
-    NETWORK_FAILURE + " TEXT DEFAULT NULL," + "d_rpt" + " INTEGER, " +
-    SUBSCRIPTION_ID + " INTEGER DEFAULT -1);";
+    NETWORK_FAILURE + " TEXT DEFAULT NULL, " + UNREGISTERED_USERS + " TEXT DEFAULT NULL, " +
+    "d_rpt" + " INTEGER, " + SUBSCRIPTION_ID + " INTEGER DEFAULT -1);";
 
   public static final String[] CREATE_INDEXS = {
     "CREATE INDEX IF NOT EXISTS mms_thread_id_index ON " + TABLE_NAME + " (" + THREAD_ID + ");",
@@ -129,7 +133,7 @@ public class MmsDatabase extends MessagingDatabase {
       CONTENT_LOCATION, EXPIRY, MESSAGE_TYPE,
       MESSAGE_SIZE, STATUS, TRANSACTION_ID,
       BODY, PART_COUNT, ADDRESS, ADDRESS_DEVICE_ID,
-      RECEIPT_COUNT, MISMATCHED_IDENTITIES, NETWORK_FAILURE, SUBSCRIPTION_ID,
+      RECEIPT_COUNT, MISMATCHED_IDENTITIES, NETWORK_FAILURE, UNREGISTERED_USERS, SUBSCRIPTION_ID,
       AttachmentDatabase.TABLE_NAME + "." + AttachmentDatabase.ROW_ID + " AS " + AttachmentDatabase.ATTACHMENT_ID_ALIAS,
       AttachmentDatabase.UNIQUE_ID,
       AttachmentDatabase.MMS_ID,
@@ -185,6 +189,22 @@ public class MmsDatabase extends MessagingDatabase {
   public void removeFailure(long messageId, NetworkFailure failure) {
     try {
       removeFromDocument(messageId, NETWORK_FAILURE, failure, NetworkFailureList.class);
+    } catch (IOException e) {
+      Log.w(TAG, e);
+    }
+  }
+
+  public void addUnregisteredUsers(long messageId, List<UnregisteredUser> users) {
+    try {
+      addToDocument(messageId, UNREGISTERED_USERS, users, UnregisteredUserList.class);
+    } catch (IOException e) {
+      Log.w(TAG, e);
+    }
+  }
+
+  public void removeUnregisteredUser(long messageId, UnregisteredUser user) {
+    try {
+      removeFromDocument(messageId, UNREGISTERED_USERS, user, UnregisteredUserList.class);
     } catch (IOException e) {
       Log.w(TAG, e);
     }
@@ -339,6 +359,14 @@ public class MmsDatabase extends MessagingDatabase {
     setNotifyConverationListeners(cursor, getThreadIdForMessage(messageId));
     return cursor;
   }
+
+  public Reader getUnregisteredUserMessagesForThread(MasterSecret masterSecret, long threadId) {
+    String where = THREAD_ID + " = " + threadId + " AND " + UNREGISTERED_USERS + " IS NOT NULL";
+    Cursor cursor = rawQuery(where, null);
+    setNotifyConverationListeners(cursor, threadId);
+    return readerFor(masterSecret, cursor);
+  }
+
 
   public Reader getDecryptInProgressMessages(MasterSecret masterSecret) {
     String where = MESSAGE_BOX + " & " + (Types.ENCRYPTION_ASYMMETRIC_BIT) + " != 0";
@@ -1105,29 +1133,31 @@ public class MmsDatabase extends MessagingDatabase {
     }
 
     private MediaMmsMessageRecord getMediaMmsMessageRecord(Cursor cursor) {
-      long id                 = cursor.getLong(cursor.getColumnIndexOrThrow(MmsDatabase.ID));
-      long dateSent           = cursor.getLong(cursor.getColumnIndexOrThrow(MmsDatabase.NORMALIZED_DATE_SENT));
-      long dateReceived       = cursor.getLong(cursor.getColumnIndexOrThrow(MmsDatabase.NORMALIZED_DATE_RECEIVED));
-      long box                = cursor.getLong(cursor.getColumnIndexOrThrow(MmsDatabase.MESSAGE_BOX));
-      long threadId           = cursor.getLong(cursor.getColumnIndexOrThrow(MmsDatabase.THREAD_ID));
-      String address          = cursor.getString(cursor.getColumnIndexOrThrow(MmsDatabase.ADDRESS));
-      int addressDeviceId     = cursor.getInt(cursor.getColumnIndexOrThrow(MmsDatabase.ADDRESS_DEVICE_ID));
-      int receiptCount        = cursor.getInt(cursor.getColumnIndexOrThrow(MmsDatabase.RECEIPT_COUNT));
-      DisplayRecord.Body body = getBody(cursor);
-      int partCount           = cursor.getInt(cursor.getColumnIndexOrThrow(MmsDatabase.PART_COUNT));
-      String mismatchDocument = cursor.getString(cursor.getColumnIndexOrThrow(MmsDatabase.MISMATCHED_IDENTITIES));
-      String networkDocument  = cursor.getString(cursor.getColumnIndexOrThrow(MmsDatabase.NETWORK_FAILURE));
-      int subscriptionId      = cursor.getInt(cursor.getColumnIndexOrThrow(MmsDatabase.SUBSCRIPTION_ID));
+      long id                     = cursor.getLong(cursor.getColumnIndexOrThrow(MmsDatabase.ID));
+      long dateSent               = cursor.getLong(cursor.getColumnIndexOrThrow(MmsDatabase.NORMALIZED_DATE_SENT));
+      long dateReceived           = cursor.getLong(cursor.getColumnIndexOrThrow(MmsDatabase.NORMALIZED_DATE_RECEIVED));
+      long box                    = cursor.getLong(cursor.getColumnIndexOrThrow(MmsDatabase.MESSAGE_BOX));
+      long threadId               = cursor.getLong(cursor.getColumnIndexOrThrow(MmsDatabase.THREAD_ID));
+      String address              = cursor.getString(cursor.getColumnIndexOrThrow(MmsDatabase.ADDRESS));
+      int addressDeviceId         = cursor.getInt(cursor.getColumnIndexOrThrow(MmsDatabase.ADDRESS_DEVICE_ID));
+      int receiptCount            = cursor.getInt(cursor.getColumnIndexOrThrow(MmsDatabase.RECEIPT_COUNT));
+      DisplayRecord.Body body     = getBody(cursor);
+      int partCount               = cursor.getInt(cursor.getColumnIndexOrThrow(MmsDatabase.PART_COUNT));
+      String mismatchDocument     = cursor.getString(cursor.getColumnIndexOrThrow(MmsDatabase.MISMATCHED_IDENTITIES));
+      String networkDocument      = cursor.getString(cursor.getColumnIndexOrThrow(MmsDatabase.NETWORK_FAILURE));
+      String unregisteredDocument = cursor.getString(cursor.getColumnIndexOrThrow(MmsDatabase.UNREGISTERED_USERS));
+      int subscriptionId          = cursor.getInt(cursor.getColumnIndexOrThrow(MmsDatabase.SUBSCRIPTION_ID));
 
-      Recipients                recipients      = getRecipientsFor(address);
-      List<IdentityKeyMismatch> mismatches      = getMismatchedIdentities(mismatchDocument);
-      List<NetworkFailure>      networkFailures = getFailures(networkDocument);
-      SlideDeck                 slideDeck       = getSlideDeck(cursor);
+      Recipients                recipients        = getRecipientsFor(address);
+      List<IdentityKeyMismatch> mismatches        = getMismatchedIdentities(mismatchDocument);
+      List<NetworkFailure>      networkFailures   = getFailures(networkDocument);
+      List<UnregisteredUser>    unregisteredUsers = getUnregisteredUsers(unregisteredDocument);
+      SlideDeck                 slideDeck         = getSlideDeck(cursor);
 
       return new MediaMmsMessageRecord(context, id, recipients, recipients.getPrimaryRecipient(),
                                        addressDeviceId, dateSent, dateReceived, receiptCount,
                                        threadId, body, slideDeck, partCount, box, mismatches,
-                                       networkFailures, subscriptionId);
+                                       networkFailures, unregisteredUsers, subscriptionId);
     }
 
     private Recipients getRecipientsFor(String address) {
@@ -1160,6 +1190,18 @@ public class MmsDatabase extends MessagingDatabase {
       if (!TextUtils.isEmpty(document)) {
         try {
           return JsonUtils.fromJson(document, NetworkFailureList.class).getList();
+        } catch (IOException ioe) {
+          Log.w(TAG, ioe);
+        }
+      }
+
+      return new LinkedList<>();
+    }
+
+    private List<UnregisteredUser> getUnregisteredUsers(String document) {
+      if (!TextUtils.isEmpty(document)) {
+        try {
+          return JsonUtils.fromJson(document, UnregisteredUserList.class).getList();
         } catch (IOException ioe) {
           Log.w(TAG, ioe);
         }

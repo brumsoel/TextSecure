@@ -27,6 +27,7 @@ import org.thoughtcrime.securesms.database.MmsSmsColumns;
 import org.thoughtcrime.securesms.database.SmsDatabase;
 import org.thoughtcrime.securesms.database.documents.NetworkFailure;
 import org.thoughtcrime.securesms.database.documents.IdentityKeyMismatch;
+import org.thoughtcrime.securesms.database.documents.UnregisteredUser;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.Recipients;
 import org.thoughtcrime.securesms.util.GroupUtil;
@@ -50,6 +51,7 @@ public abstract class MessageRecord extends DisplayRecord {
   private final long                      id;
   private final List<IdentityKeyMismatch> mismatches;
   private final List<NetworkFailure>      networkFailures;
+  private final List<UnregisteredUser>    unregisteredUsers;
   private final int                       subscriptionId;
 
   MessageRecord(Context context, long id, Body body, Recipients recipients,
@@ -58,6 +60,7 @@ public abstract class MessageRecord extends DisplayRecord {
                 int deliveryStatus, int receiptCount, long type,
                 List<IdentityKeyMismatch> mismatches,
                 List<NetworkFailure> networkFailures,
+                List<UnregisteredUser> unregisteredUsers,
                 int subscriptionId)
   {
     super(context, body, recipients, dateSent, dateReceived, threadId, deliveryStatus, receiptCount,
@@ -67,6 +70,7 @@ public abstract class MessageRecord extends DisplayRecord {
     this.recipientDeviceId   = recipientDeviceId;
     this.mismatches          = mismatches;
     this.networkFailures     = networkFailures;
+    this.unregisteredUsers   = unregisteredUsers;
     this.subscriptionId      = subscriptionId;
   }
 
@@ -175,8 +179,16 @@ public abstract class MessageRecord extends DisplayRecord {
     return networkFailures;
   }
 
+  public List<UnregisteredUser> getUnregisteredUsers() {
+    return unregisteredUsers;
+  }
+
   public boolean hasNetworkFailures() {
     return networkFailures != null && !networkFailures.isEmpty();
+  }
+
+  public boolean hasUnregisteredUsers() {
+    return unregisteredUsers != null && !unregisteredUsers.isEmpty();
   }
 
   protected SpannableString emphasisAdded(String sequence) {
