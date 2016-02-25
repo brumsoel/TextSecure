@@ -359,7 +359,6 @@ public class MmsDatabase extends MessagingDatabase {
     return readerFor(masterSecret, cursor);
   }
 
-
   public Reader getDecryptInProgressMessages(MasterSecret masterSecret) {
     String where = MESSAGE_BOX + " & " + (Types.ENCRYPTION_ASYMMETRIC_BIT) + " != 0";
     return readerFor(masterSecret, rawQuery(where, null));

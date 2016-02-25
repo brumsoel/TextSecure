@@ -141,7 +141,7 @@ public class MessageRecipientListItem extends RelativeLayout
         unregisteredButton.setOnClickListener(new OnClickListener() {
           @Override
           public void onClick(View v) {
-            new UserUnregisteredDialog(getContext(), masterSecret, record, unregisteredUser);
+            new UserUnregisteredDialog(getContext(), masterSecret, record, unregisteredUser).show();
           }
         });
       } else {
