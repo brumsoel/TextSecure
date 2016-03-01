@@ -78,10 +78,15 @@ public class UserUnregisteredDialog extends AlertDialog {
         }
 
         private void processMessageRecord(MessageRecord record) {
-          MmsDatabase database = DatabaseFactory.getMmsDatabase(getContext());
+          if (!record.isIdentityMismatchFailure() &&
+              !record.hasNetworkFailures()        &&
+              !record.hasUnseenUnregisteredUsers())
+          {
+            MmsDatabase database = DatabaseFactory.getMmsDatabase(getContext());
 
-          database.markAsSecure(record.getId());
-          database.markAsSent(record.getId());
+            database.markAsSecure(record.getId());
+            database.markAsSent(record.getId());
+          }
         }
 
         private void processPendingMessageRecords(long threadId) {

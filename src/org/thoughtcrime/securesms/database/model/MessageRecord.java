@@ -23,7 +23,9 @@ import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
 
 import org.thoughtcrime.securesms.R;
+import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.database.MmsSmsColumns;
+import org.thoughtcrime.securesms.database.RecipientPreferenceDatabase.RecipientsPreferences;
 import org.thoughtcrime.securesms.database.SmsDatabase;
 import org.thoughtcrime.securesms.database.documents.NetworkFailure;
 import org.thoughtcrime.securesms.database.documents.IdentityKeyMismatch;
@@ -31,6 +33,7 @@ import org.thoughtcrime.securesms.database.documents.UnregisteredUser;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.Recipients;
 import org.thoughtcrime.securesms.util.GroupUtil;
+import org.whispersystems.libaxolotl.util.guava.Optional;
 
 import java.util.List;
 
@@ -189,6 +192,15 @@ public abstract class MessageRecord extends DisplayRecord {
 
   public boolean hasUnregisteredUsers() {
     return unregisteredUsers != null && !unregisteredUsers.isEmpty();
+  }
+
+  public boolean hasUnseenUnregisteredUsers() {
+    for (UnregisteredUser unregisteredUser : unregisteredUsers) {
+      Optional<RecipientsPreferences> prefs = DatabaseFactory.getRecipientPreferenceDatabase(context)
+                                                             .getRecipientsPreferences(new long[]{unregisteredUser.getRecipientId()});
+      if (!prefs.isPresent() || !prefs.get().hasSeenUserUnregistered()) return true;
+    }
+    return false;
   }
 
   protected SpannableString emphasisAdded(String sequence) {
