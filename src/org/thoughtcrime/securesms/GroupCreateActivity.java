@@ -52,8 +52,6 @@ import org.thoughtcrime.securesms.crypto.MasterSecret;
 import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.database.GroupDatabase;
 import org.thoughtcrime.securesms.database.GroupDatabase.GroupRecord;
-import org.thoughtcrime.securesms.database.NotInDirectoryException;
-import org.thoughtcrime.securesms.database.TextSecureDirectory;
 import org.thoughtcrime.securesms.database.ThreadDatabase;
 import org.thoughtcrime.securesms.groups.GroupManager;
 import org.thoughtcrime.securesms.groups.GroupManager.GroupActionResult;
@@ -168,15 +166,6 @@ public class GroupCreateActivity extends PassphraseRequiredActionBarActivity
       getSupportActionBar().setTitle(groupToUpdate.isPresent()
                                      ? R.string.GroupCreateActivity_actionbar_update_title
                                      : R.string.GroupCreateActivity_actionbar_title);
-    }
-  }
-
-  private static boolean isActiveInDirectory(Context context, Recipient recipient) {
-    try {
-      return TextSecureDirectory.getInstance(context)
-                                .isSecureTextSupported(Util.canonicalizeNumber(context, recipient.getNumber()));
-    } catch (NotInDirectoryException | InvalidNumberException e) {
-      return false;
     }
   }
 
@@ -505,10 +494,11 @@ public class GroupCreateActivity extends PassphraseRequiredActionBarActivity
       final List<Result> results = new LinkedList<>();
 
       for (Recipient recipient : recipients) {
-        boolean isPush        = isActiveInDirectory(activity, recipient);
         String  recipientE164 = null;
+        boolean isPush        = false;
         try {
           recipientE164 = Util.canonicalizeNumber(activity, recipient.getNumber());
+          isPush        = Util.isActiveNumber(activity, recipientE164);
         } catch (InvalidNumberException ine) { /* do nothing */ }
 
         if (failIfNotPush && !isPush) {

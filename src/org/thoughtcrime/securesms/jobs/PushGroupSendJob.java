@@ -3,6 +3,7 @@ package org.thoughtcrime.securesms.jobs;
 import android.content.Context;
 import android.util.Log;
 
+import org.thoughtcrime.securesms.ApplicationContext;
 import org.thoughtcrime.securesms.crypto.MasterSecret;
 import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.database.MmsDatabase;
@@ -18,8 +19,10 @@ import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientFactory;
 import org.thoughtcrime.securesms.recipients.RecipientFormattingException;
 import org.thoughtcrime.securesms.recipients.Recipients;
+import org.thoughtcrime.securesms.service.KeyCachingService;
 import org.thoughtcrime.securesms.transport.UndeliverableMessageException;
 import org.thoughtcrime.securesms.util.GroupUtil;
+import org.thoughtcrime.securesms.util.Util;
 import org.whispersystems.jobqueue.JobParameters;
 import org.whispersystems.jobqueue.requirements.NetworkRequirement;
 import org.whispersystems.libaxolotl.util.guava.Optional;
@@ -110,11 +113,19 @@ public class PushGroupSendJob extends PushSendJob implements InjectableType {
       }
 
       for (UnregisteredUserException uue : e.getUnregisteredUserExceptions()) {
-        Recipient recipient = RecipientFactory.getRecipientsFromString(context, uue.getE164Number(), false).getPrimaryRecipient();
-        Optional<RecipientsPreferences> prefs = DatabaseFactory.getRecipientPreferenceDatabase(context)
-                                                               .getRecipientsPreferences(new long[] {recipient.getRecipientId()});
-        if (!prefs.isPresent() || !prefs.get().hasSeenUserUnregistered()) notifyUserUnregistered = true;
-        unregisteredUsers.add(new UnregisteredUser(recipient.getRecipientId()));
+        Recipients                      recipients    = RecipientFactory.getRecipientsFromString(context, uue.getE164Number(), false);
+        long[]                          recipientList = new long[] {recipients.getPrimaryRecipient().getRecipientId()};
+        Optional<RecipientsPreferences> prefs         = DatabaseFactory.getRecipientPreferenceDatabase(context)
+                                                                       .getRecipientsPreferences(recipientList);
+
+        if (!prefs.isPresent() || !prefs.get().hasSeenUserUnregistered()) {
+          notifyUserUnregistered = true;
+
+          if (Util.isActiveNumber(context, uue.getE164Number())) {
+            ApplicationContext.getInstance(context).getJobManager().add(new DirectoryRefreshJob(context, masterSecret, recipients));
+          }
+        }
+        unregisteredUsers.add(new UnregisteredUser(recipients.getPrimaryRecipient().getRecipientId()));
       }
 
       database.markAsPush(messageId);

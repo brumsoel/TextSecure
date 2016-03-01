@@ -5,13 +5,12 @@ import android.util.Log;
 
 import org.thoughtcrime.securesms.ApplicationContext;
 import org.thoughtcrime.securesms.database.DatabaseFactory;
-import org.thoughtcrime.securesms.database.MessagingDatabase;
 import org.thoughtcrime.securesms.database.MessagingDatabase.SyncMessageId;
-import org.thoughtcrime.securesms.database.NotInDirectoryException;
 import org.thoughtcrime.securesms.database.TextSecureDirectory;
 import org.thoughtcrime.securesms.recipients.RecipientFactory;
 import org.thoughtcrime.securesms.recipients.Recipients;
 import org.thoughtcrime.securesms.service.KeyCachingService;
+import org.thoughtcrime.securesms.util.Util;
 import org.whispersystems.jobqueue.JobManager;
 import org.whispersystems.jobqueue.JobParameters;
 import org.whispersystems.textsecure.api.messages.TextSecureEnvelope;
@@ -26,7 +25,7 @@ public abstract class PushReceivedJob extends ContextJob {
   }
 
   public void handle(TextSecureEnvelope envelope, boolean sendExplicitReceipt) {
-    if (!isActiveNumber(context, envelope.getSource())) {
+    if (!Util.isActiveNumber(context, envelope.getSource())) {
       TextSecureDirectory directory           = TextSecureDirectory.getInstance(context);
       ContactTokenDetails contactTokenDetails = new ContactTokenDetails();
       contactTokenDetails.setNumber(envelope.getSource());
@@ -69,18 +68,4 @@ public abstract class PushReceivedJob extends ContextJob {
     DatabaseFactory.getMmsSmsDatabase(context).incrementDeliveryReceiptCount(new SyncMessageId(envelope.getSource(),
                                                                                                envelope.getTimestamp()));
   }
-
-  private boolean isActiveNumber(Context context, String e164number) {
-    boolean isActiveNumber;
-
-    try {
-      isActiveNumber = TextSecureDirectory.getInstance(context).isSecureTextSupported(e164number);
-    } catch (NotInDirectoryException e) {
-      isActiveNumber = false;
-    }
-
-    return isActiveNumber;
-  }
-
-
 }

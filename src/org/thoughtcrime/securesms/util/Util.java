@@ -41,6 +41,8 @@ import android.widget.EditText;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 
 import org.thoughtcrime.securesms.BuildConfig;
+import org.thoughtcrime.securesms.database.NotInDirectoryException;
+import org.thoughtcrime.securesms.database.TextSecureDirectory;
 import org.thoughtcrime.securesms.mms.OutgoingLegacyMmsConnection;
 import org.whispersystems.textsecure.api.util.InvalidNumberException;
 import org.whispersystems.textsecure.api.util.PhoneNumberFormatter;
@@ -192,6 +194,18 @@ public class Util {
       Log.w(TAG, e);
     }
     return false;
+  }
+
+  public static boolean isActiveNumber(Context context, String e164number) {
+    boolean isActiveNumber;
+
+    try {
+      isActiveNumber = TextSecureDirectory.getInstance(context).isSecureTextSupported(e164number);
+    } catch (NotInDirectoryException e) {
+      isActiveNumber = false;
+    }
+
+    return isActiveNumber;
   }
 
   public static byte[] readFully(InputStream in) throws IOException {
