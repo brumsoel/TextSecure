@@ -135,7 +135,6 @@ public class MessageRecipientListItem extends RelativeLayout
 
       Optional<RecipientsPreferences> prefs = DatabaseFactory.getRecipientPreferenceDatabase(getContext())
                                                              .getRecipientsPreferences(new long[] {recipient.getRecipientId()});
-      // TODO: Should we always display the "More Info" button instead of hiding it after the user has seen the UserUnregisteredDialog for this recipient?
       if (!prefs.isPresent() || !prefs.get().hasSeenUserUnregistered()) {
         unregisteredButton.setVisibility(View.VISIBLE);
         unregisteredButton.setOnClickListener(new OnClickListener() {

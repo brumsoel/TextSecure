@@ -71,7 +71,6 @@ public class UserUnregisteredDialog extends AlertDialog {
           Recipients recipients = RecipientFactory.getRecipientsForIds(getContext(), new long[]{user.getRecipientId()}, false);
           DatabaseFactory.getRecipientPreferenceDatabase(getContext()).setSeenUserUnregistered(recipients, true);
 
-          processMessageRecord(messageRecord);
           processPendingMessageRecords(messageRecord.getThreadId());
 
           return null;
