@@ -36,7 +36,6 @@ public class UserUnregisteredDialog extends AlertDialog {
     setMessage(message);
 
     setButton(AlertDialog.BUTTON_POSITIVE, "Got it", new AcceptListener(masterSecret, messageRecord, user));
-    setButton(AlertDialog.BUTTON_NEGATIVE, context.getString(android.R.string.cancel), new CancelListener());
   }
 
   @Override
@@ -107,13 +106,6 @@ public class UserUnregisteredDialog extends AlertDialog {
         }
       }.execute();
 
-      if (callback != null) callback.onClick(null, 0);
-    }
-  }
-
-  private class CancelListener implements OnClickListener {
-    @Override
-    public void onClick(DialogInterface dialog, int which) {
       if (callback != null) callback.onClick(null, 0);
     }
   }
