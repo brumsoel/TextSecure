@@ -30,12 +30,12 @@ public class UserUnregisteredDialog extends AlertDialog {
     super(context);
     Recipient recipient = RecipientFactory.getRecipientForId(context, user.getRecipientId(), false);
     String    name      = recipient.toShortString();
-    String    message   = String.format("%1$s has unregistered and is no longer a Signal user. %1$s won't receive your group messages until they reregister.", name);
+    String    message   = String.format(context.getString(R.string.UserUnregisteredDialog_s_has_unregistered_and_is_no_longer_a_signal_user), name);
 
     setTitle(name);
     setMessage(message);
 
-    setButton(AlertDialog.BUTTON_POSITIVE, "Got it", new AcceptListener(masterSecret, messageRecord, user));
+    setButton(AlertDialog.BUTTON_POSITIVE, context.getString(R.string.UserUnregisteredDialog_got_it), new AcceptListener(masterSecret, messageRecord, user));
   }
 
   @Override

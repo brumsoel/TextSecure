@@ -351,6 +351,7 @@
     <!-- MessageDetailsRecipient -->
     <string name="MessageDetailsRecipient_failed_to_send">Failed to send</string>
     <string name="MessageDetailsRecipient_new_identity">New identity</string>
+    <string name="MessageDetailsRecipient_no_longer_registered">No longer registered</string>
 
     <!-- MmsDownloader -->
     <string name="MmsDownloader_error_storing_mms">Error storing MMS!</string>
@@ -537,6 +538,10 @@
     <string name="ThreadRecord_missed_call">Missed call</string>
     <string name="ThreadRecord_media_message">Media message</string>
     <string name="ThreadRecord_s_is_on_signal_say_hey">%s is on Signal, say hey!</string>
+
+    <!-- UserUnregisteredDialog -->
+    <string name="UserUnregisteredDialog_s_has_unregistered_and_is_no_longer_a_signal_user">%1$s has unregistered and is no longer a Signal user. Until they reregister, %1$s won\'t receive your group messages.</string>
+    <string name="UserUnregisteredDialog_got_it">Got it</string>
 
     <!-- VerifyIdentityActivity -->
     <string name="VerifyIdentityActivity_you_do_not_have_an_identity_key">You do not have an identity key.</string>
@@ -749,6 +754,7 @@
     <!-- message_recipients_list_item -->
     <string name="message_recipients_list_item__verify">VERIFY</string>
     <string name="message_recipients_list_item__resend">RESEND</string>
+    <string name="message_recipients_list_item__more_info">MORE INFO</string>
 
     <!-- MmsPreferencesFragment -->
     <string name="MmsPreferencesFragment__manual_mms_settings_are_required">Manual MMS settings are required for your phone.</string>

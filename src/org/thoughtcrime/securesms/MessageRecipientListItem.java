@@ -131,7 +131,7 @@ public class MessageRecipientListItem extends RelativeLayout
       resendButton.setVisibility(View.GONE);
       conflictButton.setVisibility(View.GONE);
 
-      errorText = "No longer registered";
+      errorText = getContext().getString(R.string.MessageDetailsRecipient_no_longer_registered);
 
       Optional<RecipientsPreferences> prefs = DatabaseFactory.getRecipientPreferenceDatabase(getContext())
                                                              .getRecipientsPreferences(new long[] {recipient.getRecipientId()});
