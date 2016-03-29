@@ -31,7 +31,7 @@ public class IncomingPstnCallListener extends BroadcastReceiver {
         && callState.isInCall())) {
       return;
     }
-    Log.d(TAG, "Attempting to deny incoming PSTN call.");
+    Log.w(TAG, "Attempting to deny incoming PSTN call.");
     TelephonyManager tm = (TelephonyManager)context.getSystemService(Context.TELEPHONY_SERVICE);
     try {
       Method getTelephony = tm.getClass().getDeclaredMethod("getITelephony");
@@ -39,13 +39,13 @@ public class IncomingPstnCallListener extends BroadcastReceiver {
       Object telephonyService = getTelephony.invoke(tm);
       Method endCall = telephonyService.getClass().getDeclaredMethod("endCall");
       endCall.invoke(telephonyService);
-      Log.d(TAG, "Denied Incoming Call From: " + intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER));
+      Log.w(TAG, "Denied Incoming Call From: " + intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER));
     } catch (NoSuchMethodException e) {
-      Log.d(TAG, "Unable to access ITelephony API", e);
+      Log.w(TAG, "Unable to access ITelephony API", e);
     } catch (IllegalAccessException e) {
-      Log.d(TAG, "Unable to access ITelephony API", e);
+      Log.w(TAG, "Unable to access ITelephony API", e);
     } catch (InvocationTargetException e) {
-      Log.d(TAG, "Unable to access ITelephony API", e);
+      Log.w(TAG, "Unable to access ITelephony API", e);
     }
   }
 }
