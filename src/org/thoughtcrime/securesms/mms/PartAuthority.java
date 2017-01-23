@@ -67,9 +67,9 @@ public class PartAuthority {
     return PartProvider.getContentUri(partUri.getPartId());
   }
 
-  public static Uri getAttachmentPublicUriWithExtension(Uri uri) {
+  public static Uri getAttachmentPublicUriWithExtension(Uri uri, String mimeType) {
     PartUriParser partUri = new PartUriParser(uri);
-    return PartProvider.getContentUriWithExtension(partUri.getPartId());
+    return PartProvider.getContentUriWithExtension(partUri.getPartId(), mimeType);
   }
 
   public static Uri getAttachmentDataUri(AttachmentId attachmentId) {

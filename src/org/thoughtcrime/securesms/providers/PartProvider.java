@@ -27,6 +27,7 @@ import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore.MediaColumns;
 import android.support.annotation.NonNull;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
 
 import org.thoughtcrime.securesms.attachments.AttachmentId;
 import org.thoughtcrime.securesms.attachments.DatabaseAttachment;
@@ -69,8 +70,10 @@ public class PartProvider extends ContentProvider {
     return ContentUris.withAppendedId(uri, attachmentId.getRowId());
   }
 
-  public static Uri getContentUriWithExtension(AttachmentId attachmentId) {
-    return getContentUri(attachmentId).buildUpon().appendEncodedPath("image.jpg").build();
+  public static Uri getContentUriWithExtension(AttachmentId attachmentId, String mimeType) {
+    final String extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType);
+    final String filename  = "attachment." + (extension != null ? extension : "jpg");
+    return getContentUri(attachmentId).buildUpon().appendEncodedPath(filename).build();
   }
 
   @SuppressWarnings("ConstantConditions")
