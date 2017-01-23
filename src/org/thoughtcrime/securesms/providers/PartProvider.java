@@ -21,13 +21,17 @@ import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.UriMatcher;
 import android.database.Cursor;
+import android.database.MatrixCursor;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
+import android.provider.MediaStore.MediaColumns;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
 import org.thoughtcrime.securesms.attachments.AttachmentId;
+import org.thoughtcrime.securesms.attachments.DatabaseAttachment;
 import org.thoughtcrime.securesms.crypto.MasterSecret;
+import org.thoughtcrime.securesms.database.AttachmentDatabase;
 import org.thoughtcrime.securesms.database.DatabaseFactory;
 import org.thoughtcrime.securesms.mms.PartUriParser;
 import org.thoughtcrime.securesms.service.KeyCachingService;
@@ -126,7 +130,15 @@ public class PartProvider extends ContentProvider {
   }
 
   @Override
-  public String getType(@NonNull Uri arg0) {
+  public String getType(@NonNull Uri uri) {
+    switch (uriMatcher.match(uri)) {
+      case SINGLE_ROW:
+      case SINGLE_ROW_WITH_EXTENSION:
+        PartUriParser      partUri    = new PartUriParser(uri);
+        AttachmentDatabase database   = DatabaseFactory.getAttachmentDatabase(getContext());
+        DatabaseAttachment attachment = database.getAttachment(partUri.getPartId());
+        if (attachment != null) return attachment.getContentType();
+    }
     return null;
   }
 
@@ -136,8 +148,26 @@ public class PartProvider extends ContentProvider {
   }
 
   @Override
-  public Cursor query(@NonNull Uri arg0, String[] arg1, String arg2, String[] arg3, String arg4) {
-    return null;
+  public Cursor query(@NonNull Uri uri, String[] projection, String selection,
+                      String[] selectionArgs, String sortOrder)
+  {
+    if (projection == null) {
+      projection = new String[] {MediaColumns._ID, MediaColumns.DATA};
+    }
+
+    PartUriParser partUri = new PartUriParser(uri);
+    MatrixCursor  cursor  = new MatrixCursor(projection);
+    Object[]      row     = new Object[projection.length];
+
+    for (int i = 0; i < row.length; i++) {
+      switch (projection[i]) {
+        case MediaColumns._ID:  row[i] = partUri.getPartId().getRowId(); break;
+        case MediaColumns.DATA: row[i] = uri.toString();                 break;
+      }
+    }
+
+    cursor.addRow(row);
+    return cursor;
   }
 
   @Override
