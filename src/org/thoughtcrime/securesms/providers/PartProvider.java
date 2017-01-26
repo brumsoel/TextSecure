@@ -46,17 +46,15 @@ import java.io.InputStream;
 public class PartProvider extends ContentProvider {
   private static final String TAG = PartProvider.class.getSimpleName();
 
-  private static final String CONTENT_URI_STRING        = "content://org.thoughtcrime.provider.securesms/part";
-  private static final Uri    CONTENT_URI               = Uri.parse(CONTENT_URI_STRING);
-  private static final int    SINGLE_ROW                = 1;
-  private static final int    SINGLE_ROW_WITH_EXTENSION = 2;
+  private static final String CONTENT_URI_STRING = "content://org.thoughtcrime.provider.securesms/part";
+  private static final Uri    CONTENT_URI        = Uri.parse(CONTENT_URI_STRING);
+  private static final int    SINGLE_ROW         = 1;
 
   private static final UriMatcher uriMatcher;
 
   static {
     uriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
-    uriMatcher.addURI("org.thoughtcrime.provider.securesms", "part/*/#", SINGLE_ROW);
-    uriMatcher.addURI("org.thoughtcrime.provider.securesms", "part/*/#/*", SINGLE_ROW_WITH_EXTENSION);
+    uriMatcher.addURI("org.thoughtcrime.provider.securesms", "part/*/#/*", SINGLE_ROW);
   }
 
   @Override
@@ -65,15 +63,14 @@ public class PartProvider extends ContentProvider {
     return true;
   }
 
-  public static Uri getContentUri(AttachmentId attachmentId) {
-    Uri uri = Uri.withAppendedPath(CONTENT_URI, String.valueOf(attachmentId.getUniqueId()));
-    return ContentUris.withAppendedId(uri, attachmentId.getRowId());
-  }
-
-  public static Uri getContentUriWithExtension(AttachmentId attachmentId, String mimeType) {
+  public static Uri getContentUri(AttachmentId attachmentId, String mimeType) {
     final String extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType);
     final String filename  = "attachment." + (extension != null ? extension : "jpg");
-    return getContentUri(attachmentId).buildUpon().appendEncodedPath(filename).build();
+    final Uri    uri       = Uri.withAppendedPath(CONTENT_URI, String.valueOf(attachmentId.getUniqueId()));
+    return ContentUris.withAppendedId(uri, attachmentId.getRowId())
+                      .buildUpon()
+                      .appendEncodedPath(filename)
+                      .build();
   }
 
   @SuppressWarnings("ConstantConditions")
@@ -106,7 +103,6 @@ public class PartProvider extends ContentProvider {
 
     switch (uriMatcher.match(uri)) {
     case SINGLE_ROW:
-    case SINGLE_ROW_WITH_EXTENSION:
       Log.w(TAG, "Parting out a single row...");
       try {
         PartUriParser        partUri = new PartUriParser(uri);
@@ -136,7 +132,6 @@ public class PartProvider extends ContentProvider {
   public String getType(@NonNull Uri uri) {
     switch (uriMatcher.match(uri)) {
       case SINGLE_ROW:
-      case SINGLE_ROW_WITH_EXTENSION:
         PartUriParser      partUri    = new PartUriParser(uri);
         AttachmentDatabase database   = DatabaseFactory.getAttachmentDatabase(getContext());
         DatabaseAttachment attachment = database.getAttachment(partUri.getPartId());
