@@ -63,8 +63,17 @@ public class PartAuthority {
   }
 
   public static Uri getAttachmentPublicUri(Uri uri, String mimeType) {
-    PartUriParser partUri = new PartUriParser(uri);
-    return PartProvider.getContentUri(partUri.getPartId(), mimeType);
+    int match = uriMatcher.match(uri);
+    switch (match) {
+      case PART_ROW:
+      case THUMB_ROW:
+        PartUriParser partUri = new PartUriParser(uri);
+        return PartProvider.getPublicContentUri(partUri.getPartId(), mimeType);
+      case PERSISTENT_ROW:
+        return PartProvider.getPublicContentUri(ContentUris.parseId(uri), mimeType);
+      default:
+        return uri;
+    }
   }
 
   public static Uri getAttachmentDataUri(AttachmentId attachmentId) {
